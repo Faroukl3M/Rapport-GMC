@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rapport GMC — Suivi hebdomadaire</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#f4f3ef;--surface:#fff;--surface2:#f0efeb;--surface3:#e8e7e2;
+  --border:rgba(0,0,0,0.09);--border-md:rgba(0,0,0,0.14);
+  --text:#181816;--text2:#5c5b57;--text3:#999892;
+  --blue:#185fa5;--blue-bg:#e6f1fb;--blue-t:#0c447c;
+  --green:#3b6d11;--green-bg:#eaf3de;--green-t:#27500a;
+  --amber:#854f0b;--amber-bg:#faeeda;--amber-t:#633806;
+  --red:#a32d2d;--red-bg:#fcebeb;--red-t:#791f1f;
+  --teal:#0f6e56;--teal-bg:#e1f5ee;--teal-t:#085041;
+  --r:10px;--rsm:6px;--sh:0 1px 3px rgba(0,0,0,0.07),0 0 0 0.5px rgba(0,0,0,0.06);
+}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.6;min-height:100vh}
+header{background:var(--surface);border-bottom:0.5px solid var(--border);padding:0 2rem;display:flex;align-items:center;justify-content:space-between;height:54px;position:sticky;top:0;z-index:100}
+.logo{display:flex;align-items:center;gap:10px;font-weight:600;font-size:15px}
+.logo-icon{width:28px;height:28px;background:var(--text);border-radius:7px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.logo-icon svg{color:#fff}
+.week-pill{font-size:12px;font-weight:500;padding:3px 10px;border-radius:99px;background:var(--blue-bg);color:var(--blue-t);border:0.5px solid rgba(24,95,165,0.18)}
+main{max-width:1120px;margin:0 auto;padding:2rem 1.5rem}
+.page-title{font-size:21px;font-weight:600;margin-bottom:3px}
+.page-sub{font-size:13px;color:var(--text2);margin-bottom:1.75rem}
+.card{background:var(--surface);border:0.5px solid var(--border);border-radius:var(--r);box-shadow:var(--sh);margin-bottom:1.25rem;overflow:hidden}
+.section-label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--text3);margin-bottom:.75rem}
+.import-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:1rem}
+.upload-card{background:var(--surface);border:0.5px solid var(--border);border-radius:var(--r);padding:1.1rem;box-shadow:var(--sh)}
+.drop-zone{border:1.5px dashed var(--border-md);border-radius:var(--rsm);padding:1.1rem;text-align:center;cursor:pointer;transition:background .15s,border-color .15s;position:relative}
+.drop-zone:hover,.drop-zone.drag-over{background:var(--surface2);border-color:var(--blue)}
+.drop-zone input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.dz-icon{width:32px;height:32px;border-radius:7px;display:flex;align-items:center;justify-content:center;margin:0 auto .6rem}
+.dz-blue{background:var(--blue-bg);color:var(--blue)}
+.dz-amber{background:var(--amber-bg);color:var(--amber)}
+.dz-opt{background:var(--surface3);color:var(--text3)}
+.dz-title{font-size:13px;font-weight:500;margin-bottom:2px}
+.dz-sub{font-size:11px;color:var(--text3)}
+.opt-badge{display:inline-block;font-size:10px;font-weight:600;padding:1px 6px;border-radius:4px;background:var(--surface3);color:var(--text3);margin-bottom:4px;text-transform:uppercase;letter-spacing:.04em}
+.file-ok{display:none;align-items:center;gap:7px;padding:.5rem .8rem;background:var(--green-bg);border:0.5px solid rgba(59,109,17,0.2);border-radius:var(--rsm);margin-top:.5rem;font-size:12px;font-weight:500;color:var(--green-t)}
+.file-ok.show{display:flex}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:var(--rsm);font-family:inherit;font-size:13px;font-weight:500;cursor:pointer;border:0.5px solid var(--border-md);background:var(--surface);color:var(--text);transition:background .1s;white-space:nowrap}
+.btn:hover{background:var(--surface2)}
+.btn-primary{background:var(--text);color:#fff;border-color:transparent}
+.btn-primary:hover{background:#2c2c2a}
+.btn-sm{padding:5px 11px;font-size:12px}
+.btn-danger{color:var(--red);border-color:rgba(163,45,45,0.25)}
+.btn-danger:hover{background:var(--red-bg)}
+.alert{display:flex;align-items:flex-start;gap:9px;padding:.8rem 1rem;border-radius:var(--rsm);font-size:13px;margin-bottom:1.25rem;border:0.5px solid}
+.alert-info{background:var(--blue-bg);border-color:rgba(24,95,165,0.18);color:var(--blue-t)}
+.alert svg{flex-shrink:0;margin-top:2px}
+.metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:1.25rem}
+.metric-card{background:var(--surface);border:0.5px solid var(--border);border-radius:var(--r);padding:1rem 1.2rem;box-shadow:var(--sh)}
+.m-val{font-size:26px;font-weight:600;line-height:1.1;margin-bottom:3px}
+.m-lbl{font-size:12px;color:var(--text2)}
+.m-blue{color:var(--blue)}.m-amber{color:var(--amber)}.m-red{color:var(--red)}.m-green{color:var(--green)}
+.top-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;margin-bottom:1.25rem}
+.top-card{background:var(--surface);border:0.5px solid var(--border);border-radius:var(--r);padding:1rem 1.2rem;box-shadow:var(--sh)}
+.tc-rank{font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:.35rem}
+.tc-name{font-size:13px;font-weight:500;line-height:1.35;margin-bottom:.5rem;color:var(--text)}
+.tc-stats{display:flex;align-items:baseline;gap:8px;margin-bottom:.45rem}
+.tc-count{font-size:22px;font-weight:600;color:var(--text)}
+.tc-pct{font-size:13px;color:var(--text2)}
+.bar-track{height:5px;background:var(--surface3);border-radius:3px;overflow:hidden}
+.bar-fill{height:100%;border-radius:3px}
+.bc0{background:var(--blue)}.bc1{background:var(--red)}.bc2{background:var(--amber)}.bc3{background:var(--teal)}.bc4{background:var(--green)}
+.tc-new{display:inline-flex;align-items:center;gap:3px;font-size:10px;font-weight:600;padding:2px 7px;border-radius:99px;background:var(--amber-bg);color:var(--amber-t);margin-top:5px}
+.tc-sevs{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}
+.sev-pill{display:inline-flex;align-items:center;font-size:10px;font-weight:500;padding:2px 7px;border-radius:99px;gap:3px}
+.sev-dis{background:var(--red-bg);color:var(--red-t)}
+.sev-dem{background:var(--amber-bg);color:var(--amber-t)}
+.sev-war{background:#fef3e2;color:#7a4f10}
+.sev-oth{background:var(--surface3);color:var(--text2)}
+.b-multi{background:var(--teal-bg);color:var(--teal-t)}
+.tabs{display:flex;border-bottom:0.5px solid var(--border);padding:0 1.25rem;background:var(--surface)}
+.tab{padding:11px 14px;font-size:13px;font-weight:500;color:var(--text2);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-0.5px;transition:color .1s;white-space:nowrap}
+.tab.active{color:var(--text);border-bottom-color:var(--text)}
+.tab:hover:not(.active){color:var(--text)}
+.tb-badge{display:inline-block;font-size:10px;font-weight:600;padding:1px 6px;border-radius:99px;margin-left:5px;background:var(--surface3);color:var(--text2)}
+.tab.active .tb-badge{background:var(--text);color:var(--surface)}
+.diff-legend{display:none;gap:16px;flex-wrap:wrap;font-size:12px;color:var(--text2);padding:.7rem 1.25rem;border-bottom:0.5px solid var(--border);background:var(--surface2)}
+.dl-dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:4px}
+.filters{display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:.8rem 1.25rem;border-bottom:0.5px solid var(--border);background:var(--surface2)}
+.filters input[type=text],.filters select{font-family:inherit;font-size:13px;padding:6px 10px;border-radius:var(--rsm);border:0.5px solid var(--border-md);background:var(--surface);color:var(--text);outline:none}
+.filters input[type=text]{min-width:190px}
+.filters input:focus,.filters select:focus{border-color:var(--blue)}
+.fsep{margin-left:auto}
+.table-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--text3);padding:8px 14px;border-bottom:0.5px solid var(--border);white-space:nowrap;background:var(--surface2);cursor:pointer;user-select:none}
+th:hover{color:var(--text2)}
+td{padding:9px 14px;border-bottom:0.5px solid var(--border);color:var(--text);vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:var(--surface2)}
+.sku{font-family:'DM Mono',monospace;font-size:12px}
+.titre-cell{max-width:170px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.motif-cell{max-width:210px}
+.badge{display:inline-flex;align-items:center;gap:3px;font-size:11px;font-weight:600;padding:2px 8px;border-radius:99px;white-space:nowrap}
+.b-new{background:var(--amber-bg);color:var(--amber-t)}
+.b-recur{background:var(--red-bg);color:var(--red-t)}
+.b-first{background:var(--blue-bg);color:var(--blue-t)}
+.b-sev{background:var(--blue-bg);color:var(--blue-t)}
+.empty{text-align:center;padding:3rem 1rem;color:var(--text3)}
+.empty svg{display:block;margin:0 auto .75rem;opacity:.35}
+.em-title{font-size:14px;font-weight:500;color:var(--text2);margin-bottom:4px}
+.em-sub{font-size:13px}
+.hw-group{padding:1rem 1.25rem;border-bottom:0.5px solid var(--border)}
+.hw-group:last-child{border-bottom:none}
+.hw-head{display:flex;align-items:center;gap:10px;margin-bottom:.65rem}
+.hw-label{font-size:12px;font-weight:600;color:var(--text3);min-width:75px}
+.hw-count{font-size:12px;font-weight:500;padding:2px 8px;border-radius:99px;background:var(--surface2);color:var(--text2)}
+.hw-item{display:flex;align-items:baseline;gap:8px;font-size:13px;margin-bottom:4px}
+.hw-sku{font-family:'DM Mono',monospace;font-size:12px;color:var(--text3);min-width:95px}
+.hw-more{font-size:12px;color:var(--text3);margin-top:3px}
+.tfoot{padding:.65rem 1.25rem;border-top:0.5px solid var(--border);font-size:12px;color:var(--text3);display:flex;justify-content:space-between;background:var(--surface2)}
+@media(max-width:760px){
+  .import-grid{grid-template-columns:1fr}
+  .metrics{grid-template-columns:repeat(2,1fr)}
+  main{padding:1rem}
+  header{padding:0 1rem}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-icon">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+    </div>
+    Rapport GMC
+  </div>
+  <div style="display:flex;align-items:center;gap:8px">
+    <span class="week-pill" id="week-badge"></span>
+    <button class="btn btn-sm btn-danger" onclick="clearHistory()">Effacer historique local</button>
+  </div>
+</header>
+
+<main>
+  <h1 class="page-title">Suivi hebdomadaire Google Merchant Center</h1>
+  <p class="page-sub">Croisez vos exports Shopify et GMC pour identifier, prioriser et suivre les corrections produits.</p>
+
+  <div class="alert alert-info">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+    <div>
+      <strong>Comment ça marche :</strong> importez l'export Shopify (stock actif) + l'export GMC S-1 (semaine passée, optionnel) + l'export GMC S0 (cette semaine).
+      Le diff entre S-1 et S0 identifie automatiquement les nouveaux problèmes, les récurrents et les résolus — sans dépendre d'un navigateur spécifique.
+    </div>
+  </div>
+
+  <div class="import-grid">
+    <div class="upload-card">
+      <div class="section-label">Shopify / Matrixify</div>
+      <div class="drop-zone" id="zone-shop">
+        <input type="file" accept=".csv" id="file-shop">
+        <div class="dz-icon dz-blue"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg></div>
+        <div class="dz-title">Produits actifs en stock</div>
+        <div class="dz-sub">Export Matrixify (.csv)</div>
+      </div>
+      <div class="file-ok" id="ok-shop"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg><span id="name-shop"></span></div>
+    </div>
+
+    <div class="upload-card">
+      <div class="section-label">GMC Semaine précédente <span class="opt-badge">optionnel</span></div>
+      <div class="drop-zone" id="zone-prev">
+        <input type="file" accept=".csv" id="file-prev">
+        <div class="dz-icon dz-opt"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
+        <div class="dz-title">Problèmes S-1</div>
+        <div class="dz-sub">Export GMC semaine passée (.csv)</div>
+      </div>
+      <div class="file-ok" id="ok-prev"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg><span id="name-prev"></span></div>
+    </div>
+
+    <div class="upload-card">
+      <div class="section-label">GMC Cette semaine</div>
+      <div class="drop-zone" id="zone-gmc">
+        <input type="file" accept=".csv" id="file-gmc">
+        <div class="dz-icon dz-amber"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>
+        <div class="dz-title">Problèmes S0</div>
+        <div class="dz-sub">Export GMC cette semaine (.csv)</div>
+      </div>
+      <div class="file-ok" id="ok-gmc"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg><span id="name-gmc"></span></div>
+    </div>
+  </div>
+
+  <div style="display:flex;align-items:center;gap:10px;margin-bottom:1.75rem">
+    <button class="btn btn-primary" onclick="runAnalysis()">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+      Générer le rapport
+    </button>
+    <span id="last-lbl" style="font-size:12px;color:var(--text3)"></span>
+  </div>
+
+  <div id="results" style="display:none">
+
+    <div class="metrics" id="metrics-row"></div>
+
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.6rem">
+      <div class="section-label" style="margin:0">Problèmes les plus impactants</div>
+      <span id="top-scope" style="font-size:12px;color:var(--text3)"></span>
+    </div>
+    <div class="top-grid" id="top-grid"></div>
+
+    <div class="card">
+      <div class="tabs">
+        <div class="tab active" onclick="switchTab('rapport',this)">Rapport S0 <span class="tb-badge" id="tb-r">0</span></div>
+        <div class="tab" onclick="switchTab('resolus',this)">Résolus <span class="tb-badge" id="tb-res">0</span></div>
+        <div class="tab" onclick="switchTab('historique',this)">Historique local</div>
+      </div>
+
+      <div id="tab-rapport">
+        <div class="diff-legend" id="diff-legend">
+          <strong>Légende diff :</strong>
+          <span><span class="dl-dot" style="background:var(--amber)"></span>Nouveau — absent de S-1</span>
+          <span><span class="dl-dot" style="background:var(--red)"></span>Récurrent — présent S-1 et S0</span>
+        </div>
+        <div class="filters">
+          <input type="text" id="search" placeholder="Rechercher SKU, titre, motif…" oninput="renderTable()">
+          <select id="f-motif" onchange="renderTable()"><option value="">Tous les motifs</option></select>
+          <select id="f-statut" onchange="renderTable()">
+            <option value="">Tous statuts</option>
+            <option value="new">Nouveaux</option>
+            <option value="recur">Récurrents</option>
+          </select>
+          <div class="fsep"></div>
+          <button class="btn btn-sm" onclick="exportCSV()">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Export CSV
+          </button>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr>
+              <th onclick="sortBy('sku',this)">SKU <span class="si">↕</span></th>
+              <th onclick="sortBy('titre',this)">Titre <span class="si">↕</span></th>
+              <th onclick="sortBy('motif',this)">Motif de correction <span class="si">↕</span></th>
+              <th onclick="sortBy('sev',this)">Gravité <span class="si">↕</span></th>
+              <th onclick="sortBy('statut',this)">Statut diff <span class="si">↕</span></th>
+              <th onclick="sortBy('nbMotifs',this)" title="Nombre de motifs distincts pour ce SKU">Motifs/SKU <span class="si">↕</span></th>
+              <th onclick="sortBy('firstSeen',this)">1ère apparition <span class="si">↕</span></th>
+              <th onclick="sortBy('nbWeeks',this)">Sem. <span class="si">↕</span></th>
+            </tr></thead>
+            <tbody id="tbody"></tbody>
+          </table>
+        </div>
+        <div id="empty-tbl" class="empty" style="display:none">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+          <div class="em-title">Aucun produit correspondant</div>
+          <div class="em-sub">Modifiez les filtres</div>
+        </div>
+        <div class="tfoot"><span id="row-count"></span></div>
+      </div>
+
+      <div id="tab-resolus" style="display:none"><div id="resolus-content"></div></div>
+      <div id="tab-historique" style="display:none"><div id="hist-content"></div></div>
+    </div>
+  </div>
+</main>
+
+<script>
+function getWeek(){const d=new Date(),j=new Date(d.getFullYear(),0,1);return`S${Math.ceil(((d-j)/86400000+j.getDay()+1)/7)}-${d.getFullYear()}`}
+const WEEK=getWeek();
+document.getElementById('week-badge').textContent=WEEK;
+
+let shopData=null,prevData=null,gmcData=null,currentReport=[];
+let _sc='statut',_sd=1;
+
+function loadHistory(){try{return JSON.parse(localStorage.getItem('gmc_h')||'{}')}catch{return{}}}
+function saveHistory(h){try{localStorage.setItem('gmc_h',JSON.stringify(h))}catch{}}
+const lr=localStorage.getItem('gmc_lr');
+if(lr)document.getElementById('last-lbl').textContent='Dernier rapport : '+lr;
+
+function parseCSV(text){
+  text=text.replace(/^\uFEFF/,'');
+  const lines=text.split(/\r?\n/).filter(l=>l.trim());
+  if(!lines.length)return[];
+  const sep=(lines[0].match(/;/g)||[]).length>(lines[0].match(/,/g)||[]).length?';':',';
+  const hdrs=sl(lines[0],sep).map(h=>h.replace(/^"|"$/g,'').trim());
+  return lines.slice(1).filter(l=>l.trim()).map(l=>{
+    const v=sl(l,sep);const o={};
+    hdrs.forEach((h,i)=>{o[h]=(v[i]||'').replace(/^"|"$/g,'').trim()});
+    return o;
+  });
+}
+function sl(line,sep){
+  const r=[];let c='';let q=false;
+  for(const ch of line){if(ch==='"'){q=!q}else if(ch===sep&&!q){r.push(c);c=''}else{c+=ch}}
+  r.push(c);return r;
+}
+function readFile(inp){
+  return new Promise((res,rej)=>{
+    const f=inp.files[0];if(!f){rej();return}
+    const r=new FileReader();
+    r.onload=e=>res({name:f.name,text:e.target.result});
+    r.onerror=rej;
+    r.readAsText(f,'UTF-8');
+  });
+}
+async function handleFile(iid,oid,nid,setter){
+  try{
+    const{name,text}=await readFile(document.getElementById(iid));
+    setter(parseCSV(text));
+    document.getElementById(nid).textContent=name;
+    document.getElementById(oid).classList.add('show');
+  }catch{alert('Erreur lecture fichier.')}
+}
+document.getElementById('file-shop').onchange=()=>handleFile('file-shop','ok-shop','name-shop',d=>{shopData=d});
+document.getElementById('file-prev').onchange=()=>handleFile('file-prev','ok-prev','name-prev',d=>{prevData=d});
+document.getElementById('file-gmc').onchange=()=>handleFile('file-gmc','ok-gmc','name-gmc',d=>{gmcData=d});
+
+['zone-shop','zone-prev','zone-gmc'].forEach(id=>{
+  const z=document.getElementById(id);
+  const map={'zone-shop':'file-shop','zone-prev':'file-prev','zone-gmc':'file-gmc'};
+  z.addEventListener('dragover',e=>{e.preventDefault();z.classList.add('drag-over')});
+  z.addEventListener('dragleave',()=>z.classList.remove('drag-over'));
+  z.addEventListener('drop',e=>{
+    e.preventDefault();z.classList.remove('drag-over');
+    if(e.dataTransfer.files[0]){
+      const dt=new DataTransfer();dt.items.add(e.dataTransfer.files[0]);
+      document.getElementById(map[id]).files=dt.files;
+      document.getElementById(map[id]).dispatchEvent(new Event('change'));
+    }
+  });
+});
+
+function buildShopMap(rows){
+  const m={};
+  for(const r of rows){
+    if((r['Status']||'').toLowerCase()!=='active') continue;
+    if((r['Published']||'').toLowerCase()!=='true') continue;
+    if(parseInt(r['Variant Inventory Qty']||'0',10)<=0) continue;
+    const vid=(r['Variant ID']||'').toString().trim();
+    if(!vid) continue;
+    m[vid]={sku:(r['Variant SKU']||r['SKU']||'').trim(),title:r['Title']||''};
+  }
+  return m;
+}
+
+function extractKeys(rows,shopMap){
+  const m=new Map();
+  for(const r of rows){
+    const id=r["ID de l'élément"]||r['Item ID']||'';
+    const match=id.match(/_(\d+)$/);if(!match)continue;
+    const vid=match[1];if(!shopMap[vid])continue;
+    const motif=(r['Titre du problème']||r['Issue title']||'').trim();
+    const sev=(r['Niveau de gravité du problème']||r['Issue severity']||'').replace('SEVERITY_','').trim();
+    const titre=r['Titre']||r['Title']||shopMap[vid].title||'';
+    const key=shopMap[vid].sku+'||'+motif;
+    if(!m.has(key)) m.set(key,{sku:shopMap[vid].sku,titre,motif,sev});
+  }
+  return m;
+}
+
+function runAnalysis(){
+  if(!shopData||!gmcData){alert('Importez au minimum le fichier Shopify et l\'export GMC S0.');return}
+  const shopMap=buildShopMap(shopData);
+  const cur=extractKeys(gmcData,shopMap);
+  const prev=prevData?extractKeys(prevData,shopMap):null;
+  let history=loadHistory();
+
+  // Resolved: in prev but not in cur
+  const resolved=[];
+  if(prev){
+    for(const[k,e] of prev){
+      if(!cur.has(k)){
+        const h=history[k];
+        resolved.push({...e,firstSeen:h?h.firstSeen:WEEK,nbWeeks:h?(h.weeks||[]).length:1});
+        if(h){h.resolved=true;h.resolvedWeek=WEEK}
+      }
+    }
+  }
+
+  // Build report
+  const report=[];
+  // Count distinct motifs per SKU in current extract
+  const motifsPerSku={};
+  for(const[,e] of cur) motifsPerSku[e.sku]=(motifsPerSku[e.sku]||0)+1;
+
+  for(const[k,e] of cur){
+    if(!history[k]) history[k]={sku:e.sku,titre:e.titre,motif:e.motif,firstSeen:WEEK,weeks:[WEEK],resolved:false};
+    else{
+      if(!history[k].weeks.includes(WEEK)) history[k].weeks.push(WEEK);
+      history[k].resolved=false;history[k].resolvedWeek=null;
+    }
+    const h=history[k];
+    const statut=prev?(prev.has(k)?'recur':'new'):'first';
+    report.push({sku:e.sku,titre:e.titre,motif:e.motif,sev:e.sev,statut,firstSeen:h.firstSeen,nbWeeks:h.weeks.length,nbMotifs:motifsPerSku[e.sku]||1});
+  }
+
+  saveHistory(history);
+  const ts=new Date().toLocaleString('fr-FR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
+  localStorage.setItem('gmc_lr',ts);
+  document.getElementById('last-lbl').textContent='Dernier rapport : '+ts;
+
+  currentReport=report;
+  renderMetrics(report,resolved);
+  renderTopMotifs(report);
+  populateFilters(report);
+  renderTable();
+  renderResolved(resolved,prev);
+  renderHistory(history);
+  document.getElementById('diff-legend').style.display=prev?'flex':'none';
+  document.getElementById('results').style.display='block';
+  document.getElementById('results').scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+function renderMetrics(rows,resolved){
+  const total=rows.length;
+  const nw=rows.filter(r=>r.statut==='new').length;
+  const rc=rows.filter(r=>r.statut==='recur').length;
+  document.getElementById('tb-r').textContent=total;
+  document.getElementById('tb-res').textContent=resolved.length;
+  document.getElementById('metrics-row').innerHTML=`
+    <div class="metric-card"><div class="m-val m-blue">${total}</div><div class="m-lbl">Produits à corriger (S0)</div></div>
+    <div class="metric-card"><div class="m-val m-amber">${nw}</div><div class="m-lbl">Nouveaux problèmes</div></div>
+    <div class="metric-card"><div class="m-val m-red">${rc}</div><div class="m-lbl">Problèmes récurrents</div></div>
+    <div class="metric-card"><div class="m-val m-green">${resolved.length}</div><div class="m-lbl">Résolus cette semaine</div></div>
+  `;
+}
+
+function renderTopMotifs(rows){
+  if(!rows.length){document.getElementById('top-grid').innerHTML='';return}
+  const counts={};const newBy={};const sevBy={};
+  for(const r of rows){
+    counts[r.motif]=(counts[r.motif]||0)+1;
+    if(r.statut==='new') newBy[r.motif]=(newBy[r.motif]||0)+1;
+    if(!sevBy[r.motif]) sevBy[r.motif]={};
+    const s=r.sev||'INCONNU';
+    sevBy[r.motif][s]=(sevBy[r.motif][s]||0)+1;
+  }
+  const sorted=Object.entries(counts).sort((a,b)=>b[1]-a[1]);
+  const total=rows.length;const top=sorted.slice(0,5);const maxC=top[0][1];
+  // Severity display config
+  const sevCfg={
+    'DISAPPROVED':{label:'Désapprouvé',cl:'sev-dis'},
+    'DEMOTED':{label:'Rétrogradé',cl:'sev-dem'},
+    'WARNING':{label:'Avertissement',cl:'sev-war'},
+    'INCONNU':{label:'Autre',cl:'sev-oth'}
+  };
+  document.getElementById('top-scope').textContent=`Top ${top.length} sur ${sorted.length} motif(s)`;
+  document.getElementById('top-grid').innerHTML=top.map(([motif,count],i)=>{
+    const pct=Math.round(count/total*100);const nw=newBy[motif]||0;
+    const sevs=sevBy[motif]||{};
+    const sevHtml=Object.entries(sevs).sort((a,b)=>b[1]-a[1]).map(([s,n])=>{
+      const cfg=sevCfg[s]||{label:s,cl:'sev-oth'};
+      return`<span class="sev-pill ${cfg.cl}">${cfg.label} <strong>${n}</strong></span>`;
+    }).join('');
+    return`<div class="top-card">
+      <div class="tc-rank">#${i+1}</div>
+      <div class="tc-name">${esc(motif)}</div>
+      <div class="tc-stats"><span class="tc-count">${count}</span><span class="tc-pct">${pct}%</span></div>
+      <div class="bar-track"><div class="bar-fill bc${i}" style="width:${Math.round(count/maxC*100)}%"></div></div>
+      <div class="tc-sevs">${sevHtml}</div>
+      ${nw>0?`<div class="tc-new">+${nw} nouveau${nw>1?'x':''}</div>`:''}
+    </div>`;
+  }).join('');
+}
+
+function populateFilters(rows){
+  const motifs=[...new Set(rows.map(r=>r.motif))].sort();
+  const sel=document.getElementById('f-motif');
+  sel.innerHTML='<option value="">Tous les motifs</option>';
+  motifs.forEach(m=>{const o=document.createElement('option');o.value=m;o.textContent=m;sel.appendChild(o)});
+}
+
+function sortBy(col,th){
+  if(_sc===col){_sd*=-1}else{_sc=col;_sd=1}
+  document.querySelectorAll('th').forEach(t=>{
+    t.classList.remove('sort-asc','sort-desc');
+    const s=t.querySelector('.si');if(s)s.textContent='↕';
+  });
+  th.classList.add(_sd===1?'sort-asc':'sort-desc');
+  const s=th.querySelector('.si');if(s)s.textContent=_sd===1?'↑':'↓';
+  renderTable();
+}
+
+function renderTable(){
+  const q=(document.getElementById('search').value||'').toLowerCase();
+  const fm=document.getElementById('f-motif').value;
+  const fs=document.getElementById('f-statut').value;
+  let rows=currentReport.filter(r=>{
+    if(q&&!((r.sku||'').toLowerCase().includes(q)||(r.titre||'').toLowerCase().includes(q)||(r.motif||'').toLowerCase().includes(q)))return false;
+    if(fm&&r.motif!==fm)return false;
+    if(fs&&r.statut!==fs)return false;
+    return true;
+  });
+  rows.sort((a,b)=>{
+    let va=a[_sc]||'',vb=b[_sc]||'';
+    if(_sc==='nbWeeks'||_sc==='nbMotifs'){va=+va;vb=+vb}
+    if(va<vb)return-_sd;if(va>vb)return _sd;return 0;
+  });
+  document.getElementById('row-count').textContent=rows.length+' produit(s) affiché(s)';
+  const tbody=document.getElementById('tbody');
+  if(!rows.length){tbody.innerHTML='';document.getElementById('empty-tbl').style.display='block';return}
+  document.getElementById('empty-tbl').style.display='none';
+  tbody.innerHTML=rows.map(r=>`<tr>
+    <td><span class="sku">${esc(r.sku)}</span></td>
+    <td><div class="titre-cell" title="${esc(r.titre)}">${esc(r.titre)}</div></td>
+    <td><div class="motif-cell">${esc(r.motif)}</div></td>
+    <td><span class="badge b-sev">${esc(r.sev)}</span></td>
+    <td>${badge(r.statut)}</td>
+    <td style="text-align:center">${r.nbMotifs>1?`<span class="badge b-multi" title="${r.nbMotifs} motifs distincts pour ce SKU">${r.nbMotifs} motifs</span>`:'<span style="color:var(--text3);font-size:12px">1</span>'}</td>
+    <td>${esc(r.firstSeen)}</td>
+    <td style="text-align:center;font-weight:500">${r.nbWeeks}</td>
+  </tr>`).join('');
+}
+
+function badge(s){
+  if(s==='new')return'<span class="badge b-new">Nouveau</span>';
+  if(s==='recur')return'<span class="badge b-recur">Récurrent</span>';
+  return'<span class="badge b-first">1ère semaine</span>';
+}
+
+function renderResolved(resolved,prev){
+  const el=document.getElementById('resolus-content');
+  if(!resolved.length){
+    el.innerHTML=`<div class="empty">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+      <div class="em-title">Aucun problème résolu détecté</div>
+      <div class="em-sub">${prev?'Aucun SKU/motif présent en S-1 n\'a disparu de S0':'Importez l\'export GMC S-1 pour comparer'}</div>
+    </div>`;return;
+  }
+  el.innerHTML=`<div style="padding:.85rem 1.25rem;border-bottom:0.5px solid var(--border);font-size:13px;color:var(--text2)">
+    <strong style="color:var(--green)">${resolved.length}</strong> problème(s) présents en S-1 mais absents de S0 — considérés résolus
+  </div>
+  <div class="table-wrap"><table>
+    <thead><tr><th>SKU</th><th>Titre</th><th>Motif résolu</th><th>1ère apparition</th><th>Semaines portées</th></tr></thead>
+    <tbody>${resolved.map(e=>`<tr>
+      <td><span class="sku">${esc(e.sku)}</span></td>
+      <td>${esc(e.titre)}</td>
+      <td>${esc(e.motif)}</td>
+      <td>${esc(e.firstSeen)}</td>
+      <td style="text-align:center;font-weight:500;color:var(--green)">${e.nbWeeks}</td>
+    </tr>`).join('')}</tbody>
+  </table></div>`;
+}
+
+function renderHistory(history){
+  const byWeek={};
+  for(const e of Object.values(history)){
+    for(const w of(e.weeks||[])){if(!byWeek[w])byWeek[w]=[];byWeek[w].push(e)}
+  }
+  const weeks=Object.keys(byWeek).sort().reverse();
+  if(!weeks.length){
+    document.getElementById('hist-content').innerHTML=`<div class="empty"><div class="em-title">Aucun historique local</div><div class="em-sub">Se remplit à chaque génération de rapport sur ce navigateur</div></div>`;return;
+  }
+  document.getElementById('hist-content').innerHTML=weeks.map(w=>`
+    <div class="hw-group">
+      <div class="hw-head">
+        <span class="hw-label">${esc(w)}</span>
+        <span class="hw-count">${byWeek[w].length} produit(s)</span>
+        ${w===WEEK?'<span class="badge b-new" style="font-size:10px">Semaine en cours</span>':''}
+      </div>
+      <div>
+        ${byWeek[w].slice(0,5).map(e=>`<div class="hw-item"><span class="hw-sku">${esc(e.sku)}</span><span style="color:var(--text2)">${esc(e.motif)}</span></div>`).join('')}
+        ${byWeek[w].length>5?`<div class="hw-more">+ ${byWeek[w].length-5} autres</div>`:''}
+      </div>
+    </div>`).join('');
+}
+
+function switchTab(n,el){
+  ['rapport','resolus','historique'].forEach(t=>{document.getElementById('tab-'+t).style.display=t===n?'block':'none'});
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+}
+
+function exportCSV(){
+  if(!currentReport.length)return;
+  const hdr=['SKU','Titre','Motif de correction','Gravité','Statut diff','Motifs/SKU','Première apparition','Nb semaines'];
+  const rows=currentReport.map(r=>[r.sku,r.titre,r.motif,r.sev,
+    r.statut==='new'?'Nouveau':r.statut==='recur'?'Récurrent':'1ère semaine',r.nbMotifs,r.firstSeen,r.nbWeeks]);
+  const csv=[hdr,...rows].map(r=>r.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(';')).join('\n');
+  const blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');a.href=url;a.download='rapport_gmc_'+WEEK+'.csv';
+  document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url);
+}
+
+function clearHistory(){
+  if(!confirm('Supprimer l\'historique local de ce navigateur ?'))return;
+  localStorage.removeItem('gmc_h');localStorage.removeItem('gmc_lr');
+  document.getElementById('last-lbl').textContent='';
+  alert('Historique local effacé.');
+}
+
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
+</script>
+</body>
+</html>
