@@ -117,6 +117,26 @@ tr:hover td{background:var(--surface2)}
 .hw-sku{font-family:'DM Mono',monospace;font-size:12px;color:var(--text3);min-width:95px}
 .hw-more{font-size:12px;color:var(--text3);margin-top:3px}
 .tfoot{padding:.65rem 1.25rem;border-top:0.5px solid var(--border);font-size:12px;color:var(--text3);display:flex;justify-content:space-between;background:var(--surface2)}
+/* Grouped table */
+.tr-group{cursor:pointer;background:var(--surface)}
+.tr-group:hover td{background:var(--surface2)}
+.tr-group td{border-bottom:0.5px solid var(--border);padding:9px 14px;vertical-align:middle}
+.tr-group.expanded td{border-bottom:none}
+.expand-btn{width:22px;height:22px;border-radius:5px;display:flex;align-items:center;justify-content:center;background:var(--surface3);color:var(--text2);transition:background .1s,transform .15s;flex-shrink:0}
+.tr-group.expanded .expand-btn{background:var(--text);color:#fff}
+.expand-icon{transition:transform .2s;display:block}
+.tr-group.expanded .expand-icon{transform:rotate(90deg)}
+.tr-child{background:#fafaf8}
+.tr-child td{padding:7px 14px 7px 52px;border-bottom:0.5px solid var(--border);font-size:12.5px;vertical-align:middle}
+.tr-child:last-of-type td{border-bottom:0.5px solid var(--border)}
+.tr-child-last td{border-bottom:0.5px solid var(--border-md) !important}
+.child-motif{color:var(--text2);max-width:280px}
+.child-row-inner{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.worst-sev{display:inline-flex;align-items:center;gap:3px;font-size:11px;font-weight:600;padding:2px 8px;border-radius:99px}
+.sev-DISAPPROVED{background:var(--red-bg);color:var(--red-t)}
+.sev-DEMOTED{background:var(--amber-bg);color:var(--amber-t)}
+.sev-WARNING{background:#fef3e2;color:#7a4f10}
+.sev-UNKNOWN,.sev-default{background:var(--surface3);color:var(--text2)}
 @media(max-width:760px){
   .import-grid{grid-template-columns:1fr}
   .metrics{grid-template-columns:repeat(2,1fr)}
@@ -227,6 +247,8 @@ tr:hover td{background:var(--surface2)}
             <option value="recur">Récurrents</option>
           </select>
           <div class="fsep"></div>
+          <button class="btn btn-sm" onclick="expandAll()">Tout ouvrir</button>
+          <button class="btn btn-sm" onclick="collapseAll()">Tout fermer</button>
           <button class="btn btn-sm" onclick="exportCSV()">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
             Export CSV
@@ -235,12 +257,12 @@ tr:hover td{background:var(--surface2)}
         <div class="table-wrap">
           <table>
             <thead><tr>
+              <th style="width:32px"></th>
               <th onclick="sortBy('sku',this)">SKU <span class="si">↕</span></th>
               <th onclick="sortBy('titre',this)">Titre <span class="si">↕</span></th>
-              <th onclick="sortBy('motif',this)">Motif de correction <span class="si">↕</span></th>
-              <th onclick="sortBy('sev',this)">Gravité <span class="si">↕</span></th>
-              <th onclick="sortBy('statut',this)">Statut diff <span class="si">↕</span></th>
-              <th onclick="sortBy('nbMotifs',this)" title="Nombre de motifs distincts pour ce SKU">Motifs/SKU <span class="si">↕</span></th>
+              <th onclick="sortBy('nbMotifs',this)" title="Nombre de motifs distincts">Motifs <span class="si">↕</span></th>
+              <th onclick="sortBy('worstSev',this)">Gravité max <span class="si">↕</span></th>
+              <th onclick="sortBy('statut',this)">Statut <span class="si">↕</span></th>
               <th onclick="sortBy('firstSeen',this)">1ère apparition <span class="si">↕</span></th>
               <th onclick="sortBy('nbWeeks',this)">Sem. <span class="si">↕</span></th>
             </tr></thead>
@@ -397,6 +419,7 @@ function runAnalysis(){
   document.getElementById('last-lbl').textContent='Dernier rapport : '+ts;
 
   currentReport=report;
+  openGroups.clear();
   renderMetrics(report,resolved);
   renderTopMotifs(report);
   populateFilters(report);
@@ -478,35 +501,113 @@ function sortBy(col,th){
   renderTable();
 }
 
+// Severity order for "worst" calculation
+const SEV_ORDER={'DISAPPROVED':0,'DEMOTED':1,'WARNING':2};
+function worstSev(sevs){return sevs.sort((a,b)=>(SEV_ORDER[a]??9)-(SEV_ORDER[b]??9))[0]||'UNKNOWN'}
+function sevClass(s){return'sev-'+(SEV_ORDER[s]!==undefined?s:'default')}
+function sevLabel(s){return{DISAPPROVED:'Désapprouvé',DEMOTED:'Rétrogradé',WARNING:'Avertissement'}[s]||s||'Autre'}
+
+// Track open groups
+const openGroups=new Set();
+
+function expandAll(){
+  const q=(document.getElementById('search').value||'').toLowerCase();
+  const fm=document.getElementById('f-motif').value;
+  const fs=document.getElementById('f-statut').value;
+  currentReport.filter(r=>{
+    if(q&&!((r.sku||'').toLowerCase().includes(q)||(r.titre||'').toLowerCase().includes(q)||(r.motif||'').toLowerCase().includes(q)))return false;
+    if(fm&&r.motif!==fm)return false;
+    if(fs&&r.statut!==fs)return false;
+    return true;
+  }).forEach(r=>openGroups.add(r.sku));
+  renderTable();
+}
+function collapseAll(){openGroups.clear();renderTable();}
+
+function toggleGroup(sku){
+  if(openGroups.has(sku)) openGroups.delete(sku);
+  else openGroups.add(sku);
+  renderTable();
+}
+
 function renderTable(){
   const q=(document.getElementById('search').value||'').toLowerCase();
   const fm=document.getElementById('f-motif').value;
   const fs=document.getElementById('f-statut').value;
+
+  // Filter individual rows first
   let rows=currentReport.filter(r=>{
     if(q&&!((r.sku||'').toLowerCase().includes(q)||(r.titre||'').toLowerCase().includes(q)||(r.motif||'').toLowerCase().includes(q)))return false;
     if(fm&&r.motif!==fm)return false;
     if(fs&&r.statut!==fs)return false;
     return true;
   });
-  rows.sort((a,b)=>{
+
+  // Group by SKU
+  const groupMap=new Map();
+  for(const r of rows){
+    if(!groupMap.has(r.sku)) groupMap.set(r.sku,{sku:r.sku,titre:r.titre,firstSeen:r.firstSeen,nbWeeks:r.nbWeeks,rows:[]});
+    groupMap.get(r.sku).rows.push(r);
+  }
+
+  // Build group summaries
+  let groups=[...groupMap.values()].map(g=>({
+    ...g,
+    nbMotifs:g.rows.length,
+    worstSev:worstSev(g.rows.map(r=>r.sev)),
+    statut:g.rows.some(r=>r.statut==='recur')?'recur':g.rows.some(r=>r.statut==='new')?'new':'first'
+  }));
+
+  // Sort groups
+  groups.sort((a,b)=>{
     let va=a[_sc]||'',vb=b[_sc]||'';
     if(_sc==='nbWeeks'||_sc==='nbMotifs'){va=+va;vb=+vb}
+    if(_sc==='worstSev'){va=SEV_ORDER[va]??9;vb=SEV_ORDER[vb]??9}
     if(va<vb)return-_sd;if(va>vb)return _sd;return 0;
   });
-  document.getElementById('row-count').textContent=rows.length+' produit(s) affiché(s)';
+
+  const skuCount=groups.length;
+  document.getElementById('row-count').textContent=`${skuCount} SKU(s) · ${rows.length} problème(s) au total`;
   const tbody=document.getElementById('tbody');
-  if(!rows.length){tbody.innerHTML='';document.getElementById('empty-tbl').style.display='block';return}
+  if(!groups.length){tbody.innerHTML='';document.getElementById('empty-tbl').style.display='block';return}
   document.getElementById('empty-tbl').style.display='none';
-  tbody.innerHTML=rows.map(r=>`<tr>
-    <td><span class="sku">${esc(r.sku)}</span></td>
-    <td><div class="titre-cell" title="${esc(r.titre)}">${esc(r.titre)}</div></td>
-    <td><div class="motif-cell">${esc(r.motif)}</div></td>
-    <td><span class="badge b-sev">${esc(r.sev)}</span></td>
-    <td>${badge(r.statut)}</td>
-    <td style="text-align:center">${r.nbMotifs>1?`<span class="badge b-multi" title="${r.nbMotifs} motifs distincts pour ce SKU">${r.nbMotifs} motifs</span>`:'<span style="color:var(--text3);font-size:12px">1</span>'}</td>
-    <td>${esc(r.firstSeen)}</td>
-    <td style="text-align:center;font-weight:500">${r.nbWeeks}</td>
-  </tr>`).join('');
+
+  let html='';
+  for(const g of groups){
+    const open=openGroups.has(g.sku);
+    const multi=g.nbMotifs>1;
+    // Group header row
+    html+=`<tr class="tr-group${open?' expanded':''}" onclick="toggleGroup('${esc(g.sku)}')">
+      <td>
+        <div class="expand-btn" aria-label="${open?'Réduire':'Développer'}">
+          <svg class="expand-icon" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+        </div>
+      </td>
+      <td><span class="sku">${esc(g.sku)}</span></td>
+      <td><div class="titre-cell" title="${esc(g.titre)}">${esc(g.titre)}</div></td>
+      <td style="text-align:center">${multi?`<span class="badge b-multi">${g.nbMotifs} motifs</span>`:'<span style="color:var(--text3);font-size:12px">1</span>'}</td>
+      <td><span class="worst-sev ${sevClass(g.worstSev)}">${sevLabel(g.worstSev)}</span></td>
+      <td>${badge(g.statut)}</td>
+      <td>${esc(g.firstSeen)}</td>
+      <td style="text-align:center;font-weight:500">${g.nbWeeks}</td>
+    </tr>`;
+    // Child rows (visible only when open)
+    if(open){
+      g.rows.forEach((r,i)=>{
+        const last=i===g.rows.length-1;
+        html+=`<tr class="tr-child${last?' tr-child-last':''}">
+          <td colspan="8">
+            <div class="child-row-inner">
+              <span class="child-motif">${esc(r.motif)}</span>
+              <span class="worst-sev ${sevClass(r.sev)}">${sevLabel(r.sev)}</span>
+              ${badge(r.statut)}
+            </div>
+          </td>
+        </tr>`;
+      });
+    }
+  }
+  tbody.innerHTML=html;
 }
 
 function badge(s){
