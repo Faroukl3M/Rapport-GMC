@@ -60,6 +60,7 @@ main{max-width:1120px;margin:0 auto;padding:2rem 1.5rem}
 .cov-detail{display:flex;flex-wrap:wrap;gap:8px;margin-top:.55rem}
 .cov-pill{font-size:11.5px;background:rgba(255,255,255,0.55);border-radius:var(--rsm);padding:3px 9px}
 .cov-mut{opacity:.7}
+.cov-actions{margin-top:.7rem}
 .trend-card{padding:1rem 1.25rem;border-bottom:0.5px solid var(--border)}
 .trend-head{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:.5rem}
 .trend-note{font-size:11px;color:var(--text3);margin-top:.4rem}
@@ -462,11 +463,14 @@ function buildShopMap(rows){
 function extractKeys(rows,shopMap){
   const m=new Map();
   const stats={total:0,badId:0,noMatch:0,matched:0};
+  const ignored=[];
   for(const r of rows){
     stats.total++;
     const id=r["ID de l'élément"]||r['Item ID']||'';
-    const match=id.match(/_(\d+)$/);if(!match){stats.badId++;continue}
-    const vid=match[1];if(!shopMap[vid]){stats.noMatch++;continue}
+    const match=id.match(/_(\d+)$/);
+    if(!match){stats.badId++;ignored.push({raison:'ID non reconnu',row:r});continue}
+    const vid=match[1];
+    if(!shopMap[vid]){stats.noMatch++;ignored.push({raison:'Produit absent ou hors stock',row:r});continue}
     stats.matched++;
     const motif=(r['Titre du problème']||r['Issue title']||'').trim();
     const sev=(r['Niveau de gravité du problème']||r['Issue severity']||'').replace('SEVERITY_','').trim();
@@ -480,6 +484,7 @@ function extractKeys(rows,shopMap){
     if(pays) m.get(key).pays.add(pays);
   }
   window._gmcStats=stats;
+  m._ignored=ignored;
   return m;
 }
 
@@ -508,6 +513,7 @@ function runAnalysis(){
   const prevAll=prevData?extractKeys(prevData,shopMap):null;
   const cur=filterScope(curAll,scope);
   const prev=prevAll?filterScope(prevAll,scope):null;
+  window._ignoredS0=curAll._ignored||[];
   let history=loadHistory();
 
   // Resolved: in prev but not in cur
@@ -586,7 +592,11 @@ function renderCoverage(){
         ` <span class="cov-mut">(${(g.noMatch||0).toLocaleString('fr-FR')} produit absent/hors stock · ${(g.badId||0).toLocaleString('fr-FR')} ID non reconnu)</span></span>`:''}
       ${(s.noSku||s.noStock||s.inactive||s.unpublished)?`<span class="cov-pill">Produits Shopify exclus : `+
         `${(s.kept||0).toLocaleString('fr-FR')} gardé(s) · ${(s.noStock||0).toLocaleString('fr-FR')} hors stock · ${(s.inactive||0).toLocaleString('fr-FR')} inactifs · ${(s.unpublished||0).toLocaleString('fr-FR')} non publiés${s.noSku?` · ${s.noSku.toLocaleString('fr-FR')} sans SKU`:''}</span>`:''}
-    </div>`;
+    </div>
+    ${ignored?`<div class="cov-actions"><button class="btn btn-sm" onclick="exportIgnored()">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      Exporter les ${ignored.toLocaleString('fr-FR')} ligne(s) ignorée(s) (CSV)
+    </button></div>`:''}`;
 }
 
 function renderMetrics(rows,resolved){
@@ -870,6 +880,21 @@ function exportCSV(){
   const scope=(document.getElementById('f-scope')||{}).value||'all';
   const sfx=scope==='online'?'_en-ligne':scope==='physical'?'_physique':'';
   const a=document.createElement('a');a.href=url;a.download='rapport_gmc_'+WEEK+sfx+'.csv';
+  document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url);
+}
+
+function exportIgnored(){
+  const ign=window._ignoredS0||[];
+  if(!ign.length){alert('Aucune ligne ignorée à exporter.');return}
+  // colonnes = union des clés rencontrées, dans l'ordre d'apparition
+  const cols=[];const seen=new Set();
+  for(const it of ign){for(const k in it.row){if(!seen.has(k)){seen.add(k);cols.push(k)}}}
+  const hdr=['Raison exclusion',...cols];
+  const rows=ign.map(it=>[it.raison,...cols.map(c=>it.row[c]||'')]);
+  const csv=[hdr,...rows].map(r=>r.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(';')).join('\n');
+  const blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');a.href=url;a.download='gmc_lignes_ignorees_'+WEEK+'.csv';
   document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url);
 }
 
