@@ -52,6 +52,17 @@ main{max-width:1120px;margin:0 auto;padding:2rem 1.5rem}
 .btn-danger:hover{background:var(--red-bg)}
 .alert{display:flex;align-items:flex-start;gap:9px;padding:.8rem 1rem;border-radius:var(--rsm);font-size:13px;margin-bottom:1.25rem;border:0.5px solid}
 .alert-info{background:var(--blue-bg);border-color:rgba(24,95,165,0.18);color:var(--blue-t)}
+.coverage{background:var(--green-bg);border:0.5px solid rgba(59,109,17,0.2);border-radius:var(--r);padding:.85rem 1.1rem;margin-bottom:1.25rem;color:var(--green-t)}
+.coverage-warn{background:var(--amber-bg);border-color:rgba(133,79,11,0.25);color:var(--amber-t)}
+.cov-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.cov-head strong{font-size:14px}
+.cov-sub{font-size:12px;opacity:.85}
+.cov-detail{display:flex;flex-wrap:wrap;gap:8px;margin-top:.55rem}
+.cov-pill{font-size:11.5px;background:rgba(255,255,255,0.55);border-radius:var(--rsm);padding:3px 9px}
+.cov-mut{opacity:.7}
+.trend-card{padding:1rem 1.25rem;border-bottom:0.5px solid var(--border)}
+.trend-head{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:.5rem}
+.trend-note{font-size:11px;color:var(--text3);margin-top:.4rem}
 .alert svg{flex-shrink:0;margin-top:2px}
 .metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:1.25rem}
 .metric-card{background:var(--surface);border:0.5px solid var(--border);border-radius:var(--r);padding:1rem 1.2rem;box-shadow:var(--sh)}
@@ -138,6 +149,9 @@ tr:hover td{background:var(--surface2)}
 .tr-child-last td{border-bottom:0.5px solid var(--border-md) !important}
 .child-motif{color:var(--text2);max-width:280px}
 .child-row-inner{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.child-info{font-size:12px;color:var(--text2);margin-top:6px;line-height:1.5;max-width:780px}
+.child-pays{font-size:11.5px;color:var(--text3);margin-top:4px}
+.child-pays strong{color:var(--text2);font-weight:600}
 .worst-sev{display:inline-flex;align-items:center;gap:3px;font-size:11px;font-weight:600;padding:2px 8px;border-radius:99px}
 .sev-DISAPPROVED{background:var(--red-bg);color:var(--red-t)}
 .sev-DEMOTED{background:var(--amber-bg);color:var(--amber-t)}
@@ -162,6 +176,9 @@ tr:hover td{background:var(--surface2)}
   </div>
   <div style="display:flex;align-items:center;gap:8px">
     <span class="week-pill" id="week-badge"></span>
+    <button class="btn btn-sm" onclick="exportHistory()" title="Sauvegarder l'historique dans un fichier">Exporter historique</button>
+    <button class="btn btn-sm" onclick="document.getElementById('imp-hist').click()" title="Charger un historique sauvegardé">Importer</button>
+    <input type="file" id="imp-hist" accept=".json" style="display:none" onchange="importHistory(this)">
     <button class="btn btn-sm btn-danger" onclick="clearHistory()">Effacer historique local</button>
   </div>
 </header>
@@ -222,6 +239,8 @@ tr:hover td{background:var(--surface2)}
   </div>
 
   <div id="results" style="display:none">
+
+    <div id="coverage" class="coverage"></div>
 
     <div class="metrics" id="metrics-row"></div>
 
@@ -423,31 +442,44 @@ document.getElementById('file-gmc').onchange=()=>handleFile('file-gmc','ok-gmc',
 
 function buildShopMap(rows){
   const m={};
+  const stats={total:0,inactive:0,unpublished:0,noStock:0,noVid:0,noSku:0,kept:0};
   for(const r of rows){
-    if((r['Status']||'').toLowerCase()!=='active') continue;
-    if((r['Published']||'').toLowerCase()!=='true') continue;
-    if(parseInt(r['Variant Inventory Qty']||'0',10)<=0) continue;
+    stats.total++;
+    if((r['Status']||'').toLowerCase()!=='active'){stats.inactive++;continue}
+    if((r['Published']||'').toLowerCase()!=='true'){stats.unpublished++;continue}
+    if(parseInt(r['Variant Inventory Qty']||'0',10)<=0){stats.noStock++;continue}
     const vid=(r['Variant ID']||'').toString().trim();
-    if(!vid) continue;
-    m[vid]={sku:(r['Variant SKU']||r['SKU']||'').trim(),title:r['Title']||''};
+    if(!vid){stats.noVid++;continue}
+    const sku=(r['Variant SKU']||r['SKU']||'').trim();
+    if(!sku){stats.noSku++;continue}
+    m[vid]={sku,title:r['Title']||''};
+    stats.kept++;
   }
+  window._shopStats=stats;
   return m;
 }
 
 function extractKeys(rows,shopMap){
   const m=new Map();
+  const stats={total:0,badId:0,noMatch:0,matched:0};
   for(const r of rows){
+    stats.total++;
     const id=r["ID de l'élément"]||r['Item ID']||'';
-    const match=id.match(/_(\d+)$/);if(!match)continue;
-    const vid=match[1];if(!shopMap[vid])continue;
+    const match=id.match(/_(\d+)$/);if(!match){stats.badId++;continue}
+    const vid=match[1];if(!shopMap[vid]){stats.noMatch++;continue}
+    stats.matched++;
     const motif=(r['Titre du problème']||r['Issue title']||'').trim();
     const sev=(r['Niveau de gravité du problème']||r['Issue severity']||'').replace('SEVERITY_','').trim();
     const titre=r['Titre']||r['Title']||shopMap[vid].title||'';
     const traffic=(r['Type de trafic']||r['Destination']||'').trim();
+    const info=(r['Informations supplémentaires sur le problème']||r['Issue detail']||'').trim();
+    const pays=(r['Pays']||r['Country']||'').trim();
     const key=shopMap[vid].sku+'||'+motif;
-    if(!m.has(key)) m.set(key,{sku:shopMap[vid].sku,titre,motif,sev,traffics:new Set()});
+    if(!m.has(key)) m.set(key,{sku:shopMap[vid].sku,titre,motif,sev,info,traffics:new Set(),pays:new Set()});
     if(traffic) m.get(key).traffics.add(traffic);
+    if(pays) m.get(key).pays.add(pays);
   }
+  window._gmcStats=stats;
   return m;
 }
 
@@ -507,7 +539,7 @@ function runAnalysis(){
   for(const[k,e] of cur){
     const h=history[k];
     const statut=prev?(prev.has(k)?'recur':'new'):'first';
-    report.push({sku:e.sku,titre:e.titre,motif:e.motif,sev:e.sev,statut,firstSeen:h.firstSeen,nbWeeks:h.weeks.length,nbMotifs:motifsPerSku[e.sku]||1});
+    report.push({sku:e.sku,titre:e.titre,motif:e.motif,sev:e.sev,info:e.info||'',pays:[...(e.pays||[])],statut,firstSeen:h.firstSeen,nbWeeks:h.weeks.length,nbMotifs:motifsPerSku[e.sku]||1});
   }
 
   saveHistory(history);
@@ -517,6 +549,7 @@ function runAnalysis(){
 
   currentReport=report;
   openGroups.clear();
+  renderCoverage();
   renderMetrics(report,resolved);
   renderTopMotifs(report);
   populateFilters(report);
@@ -531,6 +564,29 @@ function runAnalysis(){
   }
   document.getElementById('results').style.display='block';
   document.getElementById('results').scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+function renderCoverage(){
+  const s=window._shopStats||{},g=window._gmcStats||{};
+  const matched=g.matched||0,gTotal=g.total||0;
+  const ignored=(g.badId||0)+(g.noMatch||0);
+  const pct=gTotal?Math.round(matched/gTotal*100):0;
+  const warn=pct<60;
+  const el=document.getElementById('coverage');
+  if(!el)return;
+  el.className='coverage'+(warn?' coverage-warn':'');
+  el.innerHTML=`
+    <div class="cov-head">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${warn?'<path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>':'<circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/>'}</svg>
+      <strong>Couverture de l'analyse&nbsp;: ${pct}%</strong>
+      <span class="cov-sub">${matched.toLocaleString('fr-FR')} ligne(s) GMC rattachée(s) à un produit actif sur ${gTotal.toLocaleString('fr-FR')}</span>
+    </div>
+    <div class="cov-detail">
+      ${ignored?`<span class="cov-pill">${ignored.toLocaleString('fr-FR')} ligne(s) GMC ignorée(s)`+
+        ` <span class="cov-mut">(${(g.noMatch||0).toLocaleString('fr-FR')} produit absent/hors stock · ${(g.badId||0).toLocaleString('fr-FR')} ID non reconnu)</span></span>`:''}
+      ${(s.noSku||s.noStock||s.inactive||s.unpublished)?`<span class="cov-pill">Produits Shopify exclus : `+
+        `${(s.kept||0).toLocaleString('fr-FR')} gardé(s) · ${(s.noStock||0).toLocaleString('fr-FR')} hors stock · ${(s.inactive||0).toLocaleString('fr-FR')} inactifs · ${(s.unpublished||0).toLocaleString('fr-FR')} non publiés${s.noSku?` · ${s.noSku.toLocaleString('fr-FR')} sans SKU`:''}</span>`:''}
+    </div>`;
 }
 
 function renderMetrics(rows,resolved){
@@ -697,6 +753,8 @@ function renderTable(){
     if(open){
       g.rows.forEach((r,i)=>{
         const last=i===g.rows.length-1;
+        const pays=(r.pays&&r.pays.length)?`<div class="child-pays"><strong>Pays concernés :</strong> ${esc(r.pays.join(', '))}</div>`:'';
+        const info=r.info?`<div class="child-info">${esc(r.info)}</div>`:'';
         html+=`<tr class="tr-child${last?' tr-child-last':''}">
           <td colspan="8">
             <div class="child-row-inner">
@@ -704,6 +762,7 @@ function renderTable(){
               <span class="worst-sev ${sevClass(r.sev)}">${sevLabel(r.sev)}</span>
               ${badge(r.statut)}
             </div>
+            ${info}${pays}
           </td>
         </tr>`;
       });
@@ -742,6 +801,35 @@ function renderResolved(resolved,prev){
   </table></div>`;
 }
 
+function weekNum(w){const m=/^S(\d+)-(\d+)$/.exec(w||'');return m?(+m[2])*100+(+m[1]):0}
+
+function trendChart(byWeek){
+  const weeks=Object.keys(byWeek).sort((a,b)=>weekNum(a)-weekNum(b));
+  if(weeks.length<2)return'';
+  const data=weeks.map(w=>({w,n:byWeek[w].length}));
+  const max=Math.max(...data.map(d=>d.n),1);
+  const W=Math.max(420,data.length*64),H=170,pad=28,bw=Math.min(46,(W-pad*2)/data.length-12);
+  const x=i=>pad+i*((W-pad*2)/data.length)+((W-pad*2)/data.length-bw)/2;
+  const y=n=>H-pad-(n/max)*(H-pad*2);
+  let bars='',labels='',vals='';
+  data.forEach((d,i)=>{
+    const bx=x(i),by=y(d.n),bh=H-pad-by;
+    const cur=d.w===WEEK;
+    bars+=`<rect x="${bx}" y="${by}" width="${bw}" height="${bh}" rx="3" fill="${cur?'var(--blue)':'var(--teal)'}"></rect>`;
+    vals+=`<text x="${bx+bw/2}" y="${by-5}" text-anchor="middle" font-size="11" font-weight="600" fill="var(--text2)">${d.n}</text>`;
+    labels+=`<text x="${bx+bw/2}" y="${H-9}" text-anchor="middle" font-size="10" fill="var(--text3)">${esc(d.w)}</text>`;
+  });
+  const first=data[0].n,last=data[data.length-1].n,delta=last-first;
+  const trend=delta>0?`▲ +${delta} depuis ${data[0].w}`:delta<0?`▼ ${delta} depuis ${data[0].w}`:`→ stable depuis ${data[0].w}`;
+  const tcol=delta>0?'var(--red)':delta<0?'var(--green)':'var(--text3)';
+  return`<div class="trend-card">
+    <div class="trend-head"><span class="section-label" style="margin:0">Évolution du nombre de problèmes suivis</span>
+      <span style="font-size:12px;font-weight:600;color:${tcol}">${trend}</span></div>
+    <div style="overflow-x:auto"><svg viewBox="0 0 ${W} ${H}" width="100%" style="max-width:${W}px;min-width:${Math.min(W,420)}px">${bars}${vals}${labels}</svg></div>
+    <div class="trend-note">Nombre de couples SKU·motif présents dans l'historique pour chaque semaine (tous périmètres).</div>
+  </div>`;
+}
+
 function renderHistory(history){
   const byWeek={};
   for(const e of Object.values(history)){
@@ -751,7 +839,7 @@ function renderHistory(history){
   if(!weeks.length){
     document.getElementById('hist-content').innerHTML=`<div class="empty"><div class="em-title">Aucun historique local</div><div class="em-sub">Se remplit à chaque génération de rapport sur ce navigateur</div></div>`;return;
   }
-  document.getElementById('hist-content').innerHTML=weeks.map(w=>`
+  document.getElementById('hist-content').innerHTML=trendChart(byWeek)+weeks.map(w=>`
     <div class="hw-group">
       <div class="hw-head">
         <span class="hw-label">${esc(w)}</span>
@@ -790,6 +878,46 @@ function clearHistory(){
   localStorage.removeItem('gmc_h');localStorage.removeItem('gmc_lr');
   document.getElementById('last-lbl').textContent='';
   alert('Historique local effacé.');
+}
+
+function exportHistory(){
+  const h=loadHistory();
+  const payload={_type:'gmc_history',_version:1,_exportedAt:new Date().toISOString(),history:h};
+  const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');a.href=url;
+  a.download='gmc_historique_'+WEEK+'.json';
+  document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url);
+}
+
+function importHistory(inp){
+  const f=inp.files[0];if(!f)return;
+  const r=new FileReader();
+  r.onload=e=>{
+    try{
+      const data=JSON.parse(e.target.result);
+      const incoming=data&&data.history?data.history:data; // tolère un export brut
+      if(!incoming||typeof incoming!=='object')throw 0;
+      const cur=loadHistory();
+      let added=0,merged=0;
+      for(const k in incoming){
+        const inc=incoming[k];if(!inc||!inc.weeks)continue;
+        if(!cur[k]){cur[k]=inc;added++;}
+        else{
+          // fusion : union des semaines, plus ancienne firstSeen
+          const weeks=new Set([...(cur[k].weeks||[]),...(inc.weeks||[])]);
+          cur[k].weeks=[...weeks].sort();
+          if(inc.firstSeen&&(!cur[k].firstSeen||inc.firstSeen<cur[k].firstSeen))cur[k].firstSeen=inc.firstSeen;
+          merged++;
+        }
+      }
+      saveHistory(cur);
+      alert(`Historique importé : ${added} entrée(s) ajoutée(s), ${merged} fusionnée(s).`);
+      if(currentReport.length)runAnalysis(); else renderHistory(cur);
+    }catch{alert('Fichier d\'historique invalide.')}
+    inp.value='';
+  };
+  r.readAsText(f,'UTF-8');
 }
 
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
